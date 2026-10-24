@@ -1,0 +1,31 @@
+name: Build VimeMirror exe
+
+# Build manual saja (workflow_dispatch), karena menit Actions terbatas.
+# Jalankan saat kuota GitHub Actions tersedia (reset tiap 1 November).
+# Hasil: satu file VimeMirror.exe, scrcpy + adb sudah tertanam di dalam.
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download scrcpy + adb resmi
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/Genymobile/scrcpy/releases/download/v3.3.4/scrcpy-win64-v3.3.4.zip' -OutFile 'scrcpy.zip'
+          Invoke-WebRequest -Uri 'https://dl.google.com/android/repository/platform-tools-latest-windows.zip' -OutFile 'platform-tools.zip'
+          Expand-Archive -Force 'scrcpy.zip' -DestinationPath 'bundled_tools'
+          Expand-Archive -Force 'platform-tools.zip' -DestinationPath 'bundled_tools'
+      - name: Build onefile exe (tools tertanam)
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile --windowed --name VimeMirror --add-data "bundled_tools/scrcpy-win64-v3.3.4;tools/scrcpy-win64-v3.3.4" --add-data "bundled_tools/platform-tools;tools/platform-tools" vime_mirror.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VimeMirror-exe
+          path: dist/VimeMirror.exe
